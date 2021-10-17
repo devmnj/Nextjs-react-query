@@ -1,8 +1,105 @@
-import Head from 'next/head'
-import Image from 'next/image'
-import styles from '../styles/Home.module.css'
+import Head from "next/head";
+import Image from "next/image";
+import styles from "../styles/Home.module.css";
+import {
+  dehydrate,
+  QueryClient,
+  useMutation,
+  useQueryClient,
+} from "react-query";
 
-export default function Home() {
+import React, { useState } from "react";
+import { fetchUsers, useUsers } from "../hooks";
+
+const SignUpForm = () => {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const mutation = useMutation((formData: { name: string; email: string }) => {
+    return fetch("/api/users", {
+      body: JSON.stringify(formData),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+    });
+  });
+  const onSubmit = (event: any) => {
+    event.preventDefault();
+    mutation.mutate({ name, email });
+    setName("");
+    setEmail("");
+    alert("User created");
+  };
+
+  return (
+    <form onSubmit={onSubmit} className={styles.card}>
+      <label htmlFor="name">Name</label>
+      <input
+        value={name}
+        name="name"
+        onChange={(e) => setName(e.target.value)}
+        type="text"
+        autoComplete="name"
+        required
+      />
+      <label htmlFor="email">Email</label>
+      <input
+        value={email}
+        name="email"
+        type="text"
+        autoComplete="email"
+        onChange={(e) => setEmail(e.target.value)}
+        required
+      />
+      <button type="submit">Register</button>
+    </form>
+  );
+};
+
+function Form() {
+  const queryClient = useQueryClient();
+
+  const registerUser = async (event: any) => {
+    event.preventDefault();
+    const res = await fetch("http://localhost:3000/api/users", {
+      body: JSON.stringify({
+        name: event.target.name.value,
+        email: event.target.email.value,
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+    });
+
+    const result = await res.json();
+    event.target.reset();
+    queryClient.invalidateQueries("users");
+    // result.user => 'Ada Lovelace'
+  };
+
+  return (
+    <form onSubmit={registerUser} className={styles.card}>
+      <label htmlFor="name">Name</label>
+      <input id="name" name="name" type="text" autoComplete="name" required />
+      <label htmlFor="email">Email</label>
+      <input
+        id="email"
+        name="email"
+        type="text"
+        autoComplete="email"
+        required
+      />
+      <button type="submit">Register</button>
+    </form>
+  );
+}
+
+export default function Home(props) {
+  const [postCount, setPostCount] = useState(10);
+  const { data, isLoading } = useUsers(postCount);
+
+  if (isLoading) return <div>Loading</div>;
   return (
     <div className={styles.container}>
       <Head>
@@ -12,44 +109,15 @@ export default function Home() {
       </Head>
 
       <main className={styles.main}>
-        <h1 className={styles.title}>
-          Welcome to <a href="https://nextjs.org">Next.js!</a>
-        </h1>
+        <h1 className={styles.title}> Users API</h1>
 
-        <p className={styles.description}>
-          Get started by editing{' '}
-          <code className={styles.code}>pages/index.js</code>
-        </p>
-
+        <p> {data && data.length} Users fetched</p>
+        <div>{data && data.map((u) => <li key={u.id}>{u.name}</li>)}</div>
         <div className={styles.grid}>
-          <a href="https://nextjs.org/docs" className={styles.card}>
-            <h2>Documentation &rarr;</h2>
-            <p>Find in-depth information about Next.js features and API.</p>
-          </a>
-
-          <a href="https://nextjs.org/learn" className={styles.card}>
-            <h2>Learn &rarr;</h2>
-            <p>Learn about Next.js in an interactive course with quizzes!</p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/master/examples"
-            className={styles.card}
-          >
-            <h2>Examples &rarr;</h2>
-            <p>Discover and deploy boilerplate example Next.js projects.</p>
-          </a>
-
-          <a
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-          >
-            <h2>Deploy &rarr;</h2>
-            <p>
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
+          <Form />
+          <SignUpForm />
         </div>
+         
       </main>
 
       <footer className={styles.footer}>
@@ -58,12 +126,12 @@ export default function Home() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Powered by{' '}
+          Powered by{" "}
           <span className={styles.logo}>
             <Image src="/vercel.svg" alt="Vercel Logo" width={72} height={16} />
           </span>
         </a>
       </footer>
     </div>
-  )
+  );
 }
